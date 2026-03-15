@@ -1,0 +1,116 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "Stores user profile information and role.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "role": { "type": "string", "enum": ["corporate", "person", "agent"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Registration": {
+      "title": "Tax Registration",
+      "description": "Stores tax registration details for different tax types.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "taxType": { "type": "string", "enum": ["VAT", "Corporate Tax", "Excise Tax"] },
+        "trn": { "type": "string", "description": "Tax Registration Number" },
+        "status": { "type": "string", "enum": ["Active", "Pending", "Suspended"] },
+        "effectiveDate": { "type": "string", "format": "date" },
+        "entityName": { "type": "string" }
+      },
+      "required": ["userId", "taxType", "status"]
+    },
+    "VATReturn": {
+      "title": "VAT Return",
+      "description": "Stores VAT return filings.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "period": { "type": "string" },
+        "dueDate": { "type": "string", "format": "date" },
+        "status": { "type": "string", "enum": ["Filed", "Draft", "Overdue"] },
+        "totalSales": { "type": "number" },
+        "totalVAT": { "type": "number" },
+        "netVAT": { "type": "number" },
+        "filedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "period", "status"]
+    },
+    "Correspondence": {
+      "title": "Correspondence",
+      "description": "Stores messages and notifications from the tax authority.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "subject": { "type": "string" },
+        "type": { "type": "string", "enum": ["Message", "Certificate", "NOC", "Audit"] },
+        "status": { "type": "string", "enum": ["Unread", "Read", "Resolved"] },
+        "content": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "subject", "type"]
+    },
+    "Payment": {
+      "title": "Payment Record",
+      "description": "Stores tax payments and outstanding balances.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "amount": { "type": "number" },
+        "type": { "type": "string" },
+        "status": { "type": "string", "enum": ["Paid", "Outstanding", "Processing"] },
+        "dueDate": { "type": "string", "format": "date" },
+        "paidAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "amount", "status"]
+    },
+    "CorporateTaxReturn": {
+      "title": "Corporate Tax Return",
+      "description": "Stores corporate tax return filings.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "accountingPeriod": { "type": "string" },
+        "taxableIncome": { "type": "number" },
+        "taxAmount": { "type": "number" },
+        "status": { "type": "string", "enum": ["Filed", "Draft", "Overdue"] },
+        "filedAt": { "type": "string", "format": "date-time" },
+        "dueDate": { "type": "string", "format": "date" }
+      },
+      "required": ["userId", "accountingPeriod", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/registrations/{regId}": {
+      "schema": "Registration",
+      "description": "Tax registrations"
+    },
+    "/vat_returns/{returnId}": {
+      "schema": "VATReturn",
+      "description": "VAT filings"
+    },
+    "/corporate_tax_returns/{returnId}": {
+      "schema": "CorporateTaxReturn",
+      "description": "Corporate tax filings"
+    },
+    "/correspondence/{msgId}": {
+      "schema": "Correspondence",
+      "description": "User correspondence"
+    },
+    "/payments/{payId}": {
+      "schema": "Payment",
+      "description": "Payment records"
+    }
+  }
+}

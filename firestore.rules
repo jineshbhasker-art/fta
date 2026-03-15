@@ -1,0 +1,68 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function hasRole(roles) {
+      return isAuthenticated() && getUserData().role in roles;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (getUserData().role == 'admin' ||
+          (request.auth.token.email == "jinzstallionz@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    // User profiles
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isOwner(userId) || isAdmin();
+    }
+
+    // Registrations
+    match /registrations/{regId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || hasRole(['agent']) || isAdmin());
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || hasRole(['agent']) || isAdmin());
+    }
+
+    // VAT Returns
+    match /vat_returns/{returnId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || hasRole(['agent']) || isAdmin());
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || hasRole(['agent']) || isAdmin());
+    }
+
+    // Corporate Tax Returns
+    match /corporate_tax_returns/{returnId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || hasRole(['agent']) || isAdmin());
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || hasRole(['agent']) || isAdmin());
+    }
+
+    // Correspondence
+    match /correspondence/{msgId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || hasRole(['agent']) || isAdmin());
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || hasRole(['agent']) || isAdmin());
+    }
+
+    // Payments
+    match /payments/{payId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || hasRole(['agent']) || isAdmin());
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || hasRole(['agent']) || isAdmin());
+    }
+  }
+}
