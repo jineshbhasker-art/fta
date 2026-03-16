@@ -192,7 +192,7 @@ const CorporateTax: React.FC = () => {
                       </span>
                     </td>
                     <td className="py-4 font-bold text-gray-900">
-                      AED {ret.taxAmount.toLocaleString()}
+                      AED {(ret.taxAmount || 0).toLocaleString()}
                     </td>
                     <td className="py-4 text-right">
                       <div className="flex items-center justify-end gap-2">

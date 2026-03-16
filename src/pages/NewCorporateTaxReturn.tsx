@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { collection, addDoc, Timestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
+import { handleFirestoreError, OperationType } from '../utils/errorHandlers';
 import { ChevronRight, Save, Send, AlertCircle } from 'lucide-react';
 
 const NewCorporateTaxReturn: React.FC = () => {
@@ -29,8 +30,8 @@ const NewCorporateTaxReturn: React.FC = () => {
       const ctReturn = {
         userId: user.uid,
         accountingPeriod: formData.accountingPeriod,
-        taxableIncome: parseFloat(formData.taxableIncome),
-        taxAmount: parseFloat(formData.taxAmount),
+        taxableIncome: parseFloat(formData.taxableIncome) || 0,
+        taxAmount: parseFloat(formData.taxAmount) || 0,
         status,
         dueDate: formData.dueDate,
         filedAt: status === 'Filed' ? new Date().toISOString() : null,
@@ -40,7 +41,7 @@ const NewCorporateTaxReturn: React.FC = () => {
       await addDoc(collection(db, 'corporate_tax_returns'), ctReturn);
       navigate('/corporate-tax');
     } catch (err) {
-      console.error('Error saving Corporate Tax return:', err);
+      handleFirestoreError(err, OperationType.CREATE, 'corporate_tax_returns');
       setError('Failed to save Corporate Tax return. Please check your inputs.');
     } finally {
       setLoading(false);

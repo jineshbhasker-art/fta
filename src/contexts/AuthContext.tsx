@@ -4,6 +4,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { UserProfile } from '../types';
 import { initializeMockData } from '../utils/mockData';
+import { handleFirestoreError, OperationType } from '../utils/errorHandlers';
 
 interface AuthContextType {
   user: User | null;
@@ -22,12 +23,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
       if (firebaseUser) {
-        const docRef = doc(db, 'users', firebaseUser.uid);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          setProfile(docSnap.data() as UserProfile);
-          // Initialize mock data for new or existing users if empty
-          await initializeMockData(firebaseUser.uid);
+        try {
+          const docRef = doc(db, 'users', firebaseUser.uid);
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists()) {
+            setProfile(docSnap.data() as UserProfile);
+            // Initialize mock data for new or existing users if empty
+            await initializeMockData(firebaseUser.uid);
+          }
+        } catch (err) {
+          handleFirestoreError(err, OperationType.GET, `users/${firebaseUser.uid}`);
         }
       } else {
         setProfile(null);

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, query, where, getDocs, addDoc, Timestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, Timestamp, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { handleFirestoreError, OperationType } from '../utils/errorHandlers';
@@ -43,44 +43,54 @@ const VATServices: React.FC = () => {
     'VAT 201 - Submitted VAT Returns'
   ];
 
-  useEffect(() => {
-    const fetchReturns = async () => {
-      if (!user) return;
-      try {
-        const q = query(collection(db, 'vat_returns'), where('userId', '==', user.uid));
-        const querySnapshot = await getDocs(q);
-        const fetchedReturns = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        } as VATReturn));
+  const fetchReturns = async () => {
+    if (!user) return;
+    try {
+      const q = query(collection(db, 'vat_returns'), where('userId', '==', user.uid));
+      const querySnapshot = await getDocs(q);
+      const fetchedReturns = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as VATReturn));
 
-        // Auto-seed 2026-Q2 if not exists
-        const hasQ2 = fetchedReturns.some(r => r.period === '2026-Q2');
-        if (!hasQ2) {
-            const newReturn = {
-              userId: user.uid,
-              period: '2026-Q2',
-              status: 'Draft' as const,
-              totalSales: 750000,
-              totalVAT: 37500,
-              netVAT: 37500,
-              dueDate: '2026-07-28',
-              createdAt: Timestamp.now()
-            };
-            const docRef = await addDoc(collection(db, 'vat_returns'), newReturn);
-            setReturns([{ id: docRef.id, ...newReturn }, ...fetchedReturns]);
-        } else {
-          setReturns(fetchedReturns);
-        }
-      } catch (err) {
-        handleFirestoreError(err, OperationType.LIST, 'vat_returns');
-      } finally {
-        setLoading(false);
+      // Auto-seed 2026-Q2 if not exists
+      const hasQ2 = fetchedReturns.some(r => r.period === '2026-Q2');
+      if (!hasQ2) {
+          const newReturn = {
+            userId: user.uid,
+            period: '2026-Q2',
+            status: 'Draft' as const,
+            totalSales: 750000,
+            totalVAT: 37500,
+            netVAT: 37500,
+            dueDate: '2026-07-28',
+            createdAt: Timestamp.now()
+          };
+          const docRef = await addDoc(collection(db, 'vat_returns'), newReturn);
+          setReturns([{ id: docRef.id, ...newReturn }, ...fetchedReturns]);
+      } else {
+        setReturns(fetchedReturns);
       }
-    };
+    } catch (err) {
+      handleFirestoreError(err, OperationType.LIST, 'vat_returns');
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchReturns();
   }, [user]);
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this return?')) return;
+    try {
+      await deleteDoc(doc(db, 'vat_returns', id));
+      setReturns(prev => prev.filter(r => r.id !== id));
+    } catch (err) {
+      handleFirestoreError(err, OperationType.DELETE, `vat_returns/${id}`);
+    }
+  };
 
   if (loading) return <div className="flex items-center justify-center h-full">Loading VAT Services...</div>;
 
@@ -204,20 +214,23 @@ const VATServices: React.FC = () => {
                       </span>
                     </td>
                     <td className="py-4 px-4 text-[11px] font-bold text-gray-900">
-                      {ret.totalSales.toLocaleString()}
+                      {(ret.totalSales || 0).toLocaleString()}
                     </td>
                     <td className="py-4 px-4 text-[11px] font-bold text-gray-900">
-                      {ret.totalVAT.toLocaleString()}
+                      {(ret.totalVAT || 0).toLocaleString()}
                     </td>
                     <td className="py-4 px-4 text-[11px] font-bold text-[#B8860B]">
-                      {ret.netVAT.toLocaleString()}
+                      {(ret.netVAT || 0).toLocaleString()}
                     </td>
                     <td className="py-4 px-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <button className="p-1.5 text-gray-400 hover:text-[#B8860B] transition-colors">
                           <RotateCcw size={14} />
                         </button>
-                        <button className="p-1.5 text-gray-400 hover:text-red-500 transition-colors">
+                        <button 
+                          onClick={() => handleDelete(ret.id)}
+                          className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"
+                        >
                           <Trash2 size={14} />
                         </button>
                         <button className="p-1.5 text-gray-400 hover:text-black transition-colors">

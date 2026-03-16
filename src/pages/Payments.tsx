@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
+import { handleFirestoreError, OperationType } from '../utils/errorHandlers';
 import { Payment } from '../types';
 import { 
   CreditCard, 
@@ -27,7 +28,7 @@ const PaymentsPage: React.FC = () => {
         const snap = await getDocs(q);
         setPayments(snap.docs.map(d => ({ id: d.id, ...d.data() } as Payment)));
       } catch (err) {
-        console.error(err);
+        handleFirestoreError(err, OperationType.LIST, 'payments');
       } finally {
         setLoading(false);
       }
@@ -54,7 +55,7 @@ const PaymentsPage: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-[#0A192F] text-white p-6 rounded-2xl shadow-xl">
           <p className="text-sm text-gray-400 mb-1">Total Outstanding</p>
-          <h2 className="text-3xl font-bold tracking-tight mb-4">AED {totalOutstanding.toLocaleString()}</h2>
+          <h2 className="text-3xl font-bold tracking-tight mb-4">AED {(totalOutstanding || 0).toLocaleString()}</h2>
           <button className="w-full py-3 bg-[#B8860B] rounded-xl font-bold text-sm hover:bg-[#9A6F09] transition-all">
             Pay All Now
           </button>
@@ -112,7 +113,7 @@ const PaymentsPage: React.FC = () => {
                       <span className="font-bold text-gray-900">{pay.type}</span>
                     </div>
                   </td>
-                  <td className="px-6 py-4 font-bold text-gray-900">AED {pay.amount.toLocaleString()}</td>
+                  <td className="px-6 py-4 font-bold text-gray-900">AED {(pay.amount || 0).toLocaleString()}</td>
                   <td className="px-6 py-4">
                     <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase flex items-center gap-1 w-fit ${
                       pay.status === 'Paid' ? 'bg-green-100 text-green-700' : 

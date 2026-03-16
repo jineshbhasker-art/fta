@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
+import { handleFirestoreError, OperationType } from '../utils/errorHandlers';
 import { Correspondence } from '../types';
 import { 
   Mail, 
@@ -28,7 +29,7 @@ const CorrespondencePage: React.FC = () => {
         const snap = await getDocs(q);
         setMessages(snap.docs.map(d => ({ id: d.id, ...d.data() } as Correspondence)));
       } catch (err) {
-        console.error(err);
+        handleFirestoreError(err, OperationType.LIST, 'correspondence');
       } finally {
         setLoading(false);
       }

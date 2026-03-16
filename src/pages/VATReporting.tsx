@@ -5,6 +5,7 @@ import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { GoogleGenAI } from "@google/genai";
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -32,7 +33,9 @@ import {
   Calendar,
   Filter,
   Download,
-  Clock
+  Clock,
+  Sparkles,
+  Loader2
 } from 'lucide-react';
 
 const VATReporting: React.FC = () => {
@@ -40,6 +43,8 @@ const VATReporting: React.FC = () => {
   const { user } = useAuth();
   const [filings, setFilings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [aiInsight, setAiInsight] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -61,9 +66,40 @@ const VATReporting: React.FC = () => {
     return () => unsubscribe();
   }, [user]);
 
+  const generateAiInsight = async () => {
+    if (filings.length === 0) return;
+    setAiLoading(true);
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const model = "gemini-3.1-flash-lite-preview";
+      
+      const dataSummary = filings.map(f => ({
+        period: f.period,
+        sales: f.totalSales,
+        vat: f.totalVAT,
+        netVat: f.netVAT,
+        status: f.status
+      }));
+
+      const response = await ai.models.generateContent({
+        model,
+        contents: `Analyze the following VAT filing data for a UAE business and provide 3 concise, actionable insights or observations. Focus on trends, compliance, or potential tax savings. Keep it professional and brief.
+        
+        Data: ${JSON.stringify(dataSummary)}`,
+      });
+
+      setAiInsight(response.text || "No insights available at this time.");
+    } catch (err) {
+      console.error("AI Insight Error:", err);
+      setAiInsight("Failed to generate AI insights. Please check your connection.");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   // Prepare data for charts
   const barData = filings
-    .filter(f => f.status === 'Submitted')
+    .filter(f => f.status === 'Submitted' || f.status === 'Filed')
     .map(f => ({
       name: f.period,
       netVat: f.netVAT || 0,
@@ -109,6 +145,40 @@ const VATReporting: React.FC = () => {
           </div>
         </div>
 
+        {/* AI Insights Section */}
+        <div className="bg-gradient-to-br from-[#0A192F] to-[#152A4A] p-6 rounded-lg border border-white/10 shadow-lg text-white space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Sparkles className="text-[#B8860B]" size={20} />
+              <h3 className="text-sm font-bold uppercase tracking-wider">AI-Powered Tax Insights</h3>
+            </div>
+            <button 
+              onClick={generateAiInsight}
+              disabled={aiLoading}
+              className="px-4 py-1.5 bg-[#B8860B] hover:bg-[#9A6F09] text-white text-[10px] font-bold rounded uppercase tracking-widest transition-all disabled:opacity-50 flex items-center gap-2"
+            >
+              {aiLoading ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+              {aiInsight ? 'Refresh Insights' : 'Generate Insights'}
+            </button>
+          </div>
+          
+          {aiInsight ? (
+            <div className="bg-white/5 border border-white/10 rounded-lg p-4 text-[11px] leading-relaxed text-white/80 font-medium">
+              <div className="prose prose-invert max-w-none">
+                {aiInsight.split('\n').map((line, i) => (
+                  <p key={i} className="mb-2">{line}</p>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-4">
+              <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">
+                Click the button above to analyze your VAT data with Gemini AI
+              </p>
+            </div>
+          )}
+        </div>
+
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm space-y-2">
@@ -116,7 +186,7 @@ const VATReporting: React.FC = () => {
               <span className="text-[10px] font-bold text-gray-500 uppercase">Total Net VAT</span>
               <DollarSign size={16} className="text-[#B8860B]" />
             </div>
-            <p className="text-xl font-bold text-[#0A192F]">{totalNetVat.toLocaleString()} AED</p>
+            <p className="text-xl font-bold text-[#0A192F]">{(totalNetVat || 0).toLocaleString()} AED</p>
             <div className="flex items-center gap-1 text-green-600 text-[9px] font-bold">
               <TrendingUp size={10} />
               <span>+12.5% from last year</span>

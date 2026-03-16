@@ -195,8 +195,8 @@ const VATReturnDetail: React.FC = () => {
                     ].map((item) => (
                       <tr key={item.label} className="hover:bg-gray-50/50">
                         <td className="py-3 font-medium text-gray-700">{item.label}</td>
-                        <td className="py-3 text-right text-gray-600">{item.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                        <td className="py-3 text-right font-bold text-[#0A192F]">{item.vat.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                        <td className="py-3 text-right text-gray-600">{(item.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                        <td className="py-3 text-right font-bold text-[#0A192F]">{(item.vat || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                         <td className="py-3 text-right text-gray-400">0.00</td>
                       </tr>
                     ))}

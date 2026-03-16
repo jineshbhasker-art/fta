@@ -357,7 +357,7 @@ const NewVATReturn: React.FC = () => {
             </div>
             <div className="p-3 bg-[#B8860B]/10">
               <p className="text-[8px] font-bold text-[#B8860B] uppercase">Net VAT Payable:</p>
-              <p className="text-[10px] font-black text-[#B8860B]">{netVatPayable.toLocaleString(undefined, { minimumFractionDigits: 2 })} AED</p>
+              <p className="text-[10px] font-black text-[#B8860B]">{(netVatPayable || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })} AED</p>
             </div>
           </div>
         </div>
@@ -535,8 +535,8 @@ const NewVATReturn: React.FC = () => {
                       <span>Goods imported into the UAE</span>
                       <Info size={12} className="text-gray-300" />
                     </td>
-                    <td className="px-4 py-2 text-right font-bold text-gray-700">{formData.sales.goodsImported.amount.toLocaleString()}</td>
-                    <td className="px-4 py-2 text-right font-bold text-gray-700">{formData.sales.goodsImported.vat.toLocaleString()}</td>
+                    <td className="px-4 py-2 text-right font-bold text-gray-700">{(formData.sales.goodsImported.amount || 0).toLocaleString()}</td>
+                    <td className="px-4 py-2 text-right font-bold text-gray-700">{(formData.sales.goodsImported.vat || 0).toLocaleString()}</td>
                     <td className="px-4 py-2 text-center">
                       <button className="text-[#B8860B] font-bold flex items-center gap-1 mx-auto"><Eye size={12}/> View Details</button>
                     </td>
@@ -574,8 +574,8 @@ const NewVATReturn: React.FC = () => {
                       <span className="text-gray-400 font-bold">8</span>
                       <span>Totals</span>
                     </td>
-                    <td className="px-4 py-2 text-right">{salesTotals.totalAmount.toLocaleString()}</td>
-                    <td className="px-4 py-2 text-right">{salesTotals.totalVat.toLocaleString()}</td>
+                    <td className="px-4 py-2 text-right">{(salesTotals.totalAmount || 0).toLocaleString()}</td>
+                    <td className="px-4 py-2 text-right">{(salesTotals.totalVat || 0).toLocaleString()}</td>
                     <td className="px-4 py-2 text-right">0.00</td>
                   </tr>
                 </tbody>
@@ -660,8 +660,8 @@ const NewVATReturn: React.FC = () => {
                       <span className="text-gray-400 font-bold">11</span>
                       <span>Totals</span>
                     </td>
-                    <td className="px-4 py-2 text-right">{expensesTotals.totalAmount.toLocaleString()}</td>
-                    <td className="px-4 py-2 text-right">{expensesTotals.totalVat.toLocaleString()}</td>
+                    <td className="px-4 py-2 text-right">{(expensesTotals.totalAmount || 0).toLocaleString()}</td>
+                    <td className="px-4 py-2 text-right">{(expensesTotals.totalVat || 0).toLocaleString()}</td>
                     <td className="px-4 py-2 text-right">0.00</td>
                   </tr>
                 </tbody>
@@ -675,15 +675,15 @@ const NewVATReturn: React.FC = () => {
             <div className="p-4 space-y-4">
               <div>
                 <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">12 Total value of tax due for the period (AED)</p>
-                <div className="p-2 bg-gray-200 rounded text-[10px] font-bold text-[#0A192F] text-right">{salesTotals.totalVat.toLocaleString()}</div>
+                <div className="p-2 bg-gray-200 rounded text-[10px] font-bold text-[#0A192F] text-right">{(salesTotals.totalVat || 0).toLocaleString()}</div>
               </div>
               <div>
                 <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">13 Total value of recoverable tax for the period (AED)</p>
-                <div className="p-2 bg-gray-200 rounded text-[10px] font-bold text-[#0A192F] text-right">{expensesTotals.totalVat.toLocaleString()}</div>
+                <div className="p-2 bg-gray-200 rounded text-[10px] font-bold text-[#0A192F] text-right">{(expensesTotals.totalVat || 0).toLocaleString()}</div>
               </div>
               <div>
                 <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">14 Payable tax for the period (AED)</p>
-                <div className="p-2 bg-gray-200 rounded text-[10px] font-bold text-[#0A192F] text-right">{netVatPayable.toLocaleString()}</div>
+                <div className="p-2 bg-gray-200 rounded text-[10px] font-bold text-[#0A192F] text-right">{(netVatPayable || 0).toLocaleString()}</div>
               </div>
             </div>
           </div>
@@ -786,16 +786,16 @@ const NewVATReturn: React.FC = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-3 bg-gray-50 rounded">
                   <p className="text-[9px] font-bold text-gray-500 uppercase mb-1">Total value of tax due for the period</p>
-                  <p className="text-sm font-bold text-[#0A192F]">AED {salesTotals.totalVat.toLocaleString()}</p>
+                  <p className="text-sm font-bold text-[#0A192F]">AED {(salesTotals.totalVat || 0).toLocaleString()}</p>
                 </div>
                 <div className="p-3 bg-gray-50 rounded">
                   <p className="text-[9px] font-bold text-gray-500 uppercase mb-1">Total value of recoverable tax for the period</p>
-                  <p className="text-sm font-bold text-[#0A192F]">AED {expensesTotals.totalVat.toLocaleString()}</p>
+                  <p className="text-sm font-bold text-[#0A192F]">AED {(expensesTotals.totalVat || 0).toLocaleString()}</p>
                 </div>
               </div>
               <div className="p-4 bg-[#0A192F] text-white rounded flex justify-between items-center">
                 <p className="text-[10px] font-bold uppercase">Net VAT Payable / (Recoverable) for the period</p>
-                <p className="text-lg font-bold">AED {netVatPayable.toLocaleString()}</p>
+                <p className="text-lg font-bold">AED {(netVatPayable || 0).toLocaleString()}</p>
               </div>
             </div>
           </div>

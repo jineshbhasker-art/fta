@@ -110,7 +110,7 @@ const VATRefund: React.FC = () => {
                   <tr key={ref.id} className="hover:bg-gray-50 transition-colors">
                     <td className="py-4 px-4 text-[11px] font-bold text-gray-900">{ref.id}</td>
                     <td className="py-4 px-4 text-[11px] text-gray-600">{ref.period}</td>
-                    <td className="py-4 px-4 text-[11px] font-bold text-gray-900">{ref.amount.toLocaleString()}</td>
+                    <td className="py-4 px-4 text-[11px] font-bold text-gray-900">{(ref.amount || 0).toLocaleString()}</td>
                     <td className="py-4 px-4">
                       <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase flex items-center gap-1 w-fit ${
                         ref.status === 'Approved' 
