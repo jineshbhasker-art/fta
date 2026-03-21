@@ -290,6 +290,7 @@ const VATReporting: React.FC = () => {
                   <th className="px-4 py-3 font-bold text-gray-600 uppercase">Total Sales</th>
                   <th className="px-4 py-3 font-bold text-gray-600 uppercase">Net VAT</th>
                   <th className="px-4 py-3 font-bold text-gray-600 uppercase">Submission Date</th>
+                  <th className="px-4 py-3 font-bold text-gray-600 uppercase text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -307,6 +308,23 @@ const VATReporting: React.FC = () => {
                     <td className="px-4 py-3 text-gray-600">{(f.totalSales || 0).toLocaleString()} AED</td>
                     <td className="px-4 py-3 font-bold text-[#B8860B]">{(f.netVAT || 0).toLocaleString()} AED</td>
                     <td className="px-4 py-3 text-gray-500">{f.filedAt ? new Date(f.filedAt).toLocaleDateString() : '-'}</td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button 
+                          onClick={() => navigate(`/vat/${f.id}`)}
+                          className="p-1.5 text-gray-400 hover:text-[#B8860B] transition-colors"
+                          title="View Details"
+                        >
+                          <FileText size={14} />
+                        </button>
+                        <button 
+                          className="p-1.5 text-gray-400 hover:text-[#B8860B] transition-colors"
+                          title="Download Return"
+                        >
+                          <Download size={14} />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
