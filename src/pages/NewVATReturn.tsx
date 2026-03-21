@@ -167,6 +167,10 @@ const NewVATReturn: React.FC = () => {
         userId: user.uid,
         status,
         period: formData.period,
+        totalSales: salesTotals.totalAmount,
+        totalVAT: salesTotals.totalVat,
+        totalExpenses: expensesTotals.totalAmount,
+        totalRecoverableVAT: expensesTotals.totalVat,
         netVAT: netVatPayable,
         dueDate: formData.dueDate,
         filedAt: status === 'Submitted' ? new Date().toISOString() : null,
@@ -673,16 +677,26 @@ const NewVATReturn: React.FC = () => {
           <div className="bg-white border border-gray-200 rounded shadow-sm overflow-hidden">
             <div className="p-3 bg-gray-50 border-b border-gray-100 font-bold text-[11px] text-[#0A192F] uppercase">Net VAT Due</div>
             <div className="p-4 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">Total Sales (VATable)</p>
+                  <div className="p-2 bg-gray-100 rounded text-[10px] font-bold text-gray-700 text-right">{(salesTotals.totalAmount || 0).toLocaleString()}</div>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">Total Expenses (VATable)</p>
+                  <div className="p-2 bg-gray-100 rounded text-[10px] font-bold text-gray-700 text-right">{(expensesTotals.totalAmount || 0).toLocaleString()}</div>
+                </div>
+              </div>
               <div>
-                <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">12 Total value of tax due for the period (AED)</p>
+                <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">12 Total value of tax due for the period (AED) - VAT on Sales</p>
                 <div className="p-2 bg-gray-200 rounded text-[10px] font-bold text-[#0A192F] text-right">{(salesTotals.totalVat || 0).toLocaleString()}</div>
               </div>
               <div>
-                <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">13 Total value of recoverable tax for the period (AED)</p>
+                <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">13 Total value of recoverable tax for the period (AED) - VAT on Expenses</p>
                 <div className="p-2 bg-gray-200 rounded text-[10px] font-bold text-[#0A192F] text-right">{(expensesTotals.totalVat || 0).toLocaleString()}</div>
               </div>
               <div>
-                <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">14 Payable tax for the period (AED)</p>
+                <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">14 Payable tax for the period (AED) - Net VAT Payable</p>
                 <div className="p-2 bg-gray-200 rounded text-[10px] font-bold text-[#0A192F] text-right">{(netVatPayable || 0).toLocaleString()}</div>
               </div>
             </div>
