@@ -134,6 +134,39 @@ async function seedDatabase() {
     }
 
     // Create VAT Returns
+    const defaultVATFormData = {
+      vatRef: '',
+      periodFrom: '',
+      periodTo: '',
+      status: 'Draft',
+      period: '01/12/2025 - 28/02/2026',
+      stagger: 'Stagger 2 - Quarterly (Mar to Feb)',
+      dueDate: '30/03/2026',
+      taxYearEnd: '28/02/2026',
+      sales: {
+        standardRated: {
+          abuDhabi: { amount: 0, vat: 0, adjustment: 0 },
+          dubai: { amount: 0, vat: 0, adjustment: 0 },
+          sharjah: { amount: 0, vat: 0, adjustment: 0 },
+          ajman: { amount: 0, vat: 0, adjustment: 0 },
+          ummAlQuwain: { amount: 0, vat: 0, adjustment: 0 },
+          rasAlKhaimah: { amount: 0, vat: 0, adjustment: 0 },
+          fujairah: { amount: 0, vat: 0, adjustment: 0 },
+        },
+        touristRefunds: { amount: 0, vat: 0 },
+        reverseCharge: { amount: 0, vat: 0 },
+        zeroRated: { amount: 0 },
+        exempt: { amount: 0 },
+        goodsImported: { amount: 0, vat: 0 },
+        adjustmentsImports: { amount: 0, vat: 0 },
+      },
+      expenses: {
+        standardRated: { amount: 0, vat: 0, adjustment: 0 },
+        reverseCharge: { amount: 0, vat: 0 },
+      },
+      profitMarginScheme: 'No'
+    };
+
     const vatReturns = [
       { 
         id: `vat-img-1-${userId}`, 
@@ -151,7 +184,7 @@ async function seedDatabase() {
         netVAT: 25979.01, 
         dueDate: '30/03/2026', 
         filedAt: null, 
-        formData: { taxableIncome: 0 } 
+        formData: { ...defaultVATFormData, sales: { ...defaultVATFormData.sales, goodsImported: { amount: 519580.20, vat: 25979.01 } } } 
       },
       { 
         id: `vat-img-2-${userId}`, 
@@ -169,7 +202,7 @@ async function seedDatabase() {
         netVAT: -22298.81, 
         dueDate: '29/12/2025', 
         filedAt: '2025-12-25T10:00:00Z', 
-        formData: { taxableIncome: 0 } 
+        formData: { ...defaultVATFormData, expenses: { ...defaultVATFormData.expenses, standardRated: { amount: 445976.20, vat: 22298.81, adjustment: 0 } } } 
       },
       { 
         id: `vat-img-3-${userId}`, 
@@ -187,7 +220,7 @@ async function seedDatabase() {
         netVAT: -6162.28, 
         dueDate: '29/09/2025', 
         filedAt: '2025-09-26T10:00:00Z', 
-        formData: { taxableIncome: 0 } 
+        formData: { ...defaultVATFormData, expenses: { ...defaultVATFormData.expenses, standardRated: { amount: 123245.60, vat: 6162.28, adjustment: 0 } } } 
       },
       { 
         id: `vat-img-4-${userId}`, 
@@ -205,7 +238,7 @@ async function seedDatabase() {
         netVAT: 6646.98, 
         dueDate: '30/06/2025', 
         filedAt: '2025-06-24T10:00:00Z', 
-        formData: { taxableIncome: 0 } 
+        formData: { ...defaultVATFormData, sales: { ...defaultVATFormData.sales, standardRated: { ...defaultVATFormData.sales.standardRated, dubai: { amount: 132939.60, vat: 6646.98, adjustment: 0 } } } } 
       },
       { 
         id: `vat-img-5-${userId}`, 
@@ -223,7 +256,7 @@ async function seedDatabase() {
         netVAT: 24989.01, 
         dueDate: '28/03/2025', 
         filedAt: '2025-03-25T10:00:00Z', 
-        formData: { taxableIncome: 0 } 
+        formData: { ...defaultVATFormData, sales: { ...defaultVATFormData.sales, standardRated: { ...defaultVATFormData.sales.standardRated, abuDhabi: { amount: 499780.20, vat: 24989.01, adjustment: 0 } } } } 
       },
       { 
         id: `vat-img-6-${userId}`, 
@@ -241,7 +274,7 @@ async function seedDatabase() {
         netVAT: 12500.00, 
         dueDate: '29/12/2024', 
         filedAt: null, 
-        formData: { taxableIncome: 0 } 
+        formData: { ...defaultVATFormData, sales: { ...defaultVATFormData.sales, standardRated: { ...defaultVATFormData.sales.standardRated, sharjah: { amount: 250000.00, vat: 12500.00, adjustment: 0 } } } } 
       }
     ];
     const insertVAT = db.prepare(`

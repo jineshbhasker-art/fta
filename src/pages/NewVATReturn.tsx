@@ -90,7 +90,24 @@ const NewVATReturn: React.FC = () => {
       const data = await dataService.getVATReturn(id);
       if (data && data.formData) {
         const parsedFormData = typeof data.formData === 'string' ? JSON.parse(data.formData) : data.formData;
-        setFormData(parsedFormData);
+        
+        // Deep merge to ensure all expected properties exist
+        setFormData(prev => ({
+          ...prev,
+          ...parsedFormData,
+          sales: {
+            ...prev.sales,
+            ...(parsedFormData.sales || {}),
+            standardRated: {
+              ...prev.sales.standardRated,
+              ...(parsedFormData.sales?.standardRated || {})
+            }
+          },
+          expenses: {
+            ...prev.expenses,
+            ...(parsedFormData.expenses || {})
+          }
+        }));
       }
     } catch (err) {
       console.error('Error fetching return:', err);
@@ -100,26 +117,28 @@ const NewVATReturn: React.FC = () => {
   const calculateSalesTotals = () => {
     let totalAmount = 0;
     let totalVat = 0;
-    Object.values(formData.sales.standardRated).forEach((emirate: any) => {
-      totalAmount += emirate.amount;
-      totalVat += emirate.vat;
-    });
-    totalAmount += formData.sales.touristRefunds.amount;
-    totalVat += formData.sales.touristRefunds.vat;
-    totalAmount += formData.sales.reverseCharge.amount;
-    totalVat += formData.sales.reverseCharge.vat;
-    totalAmount += formData.sales.zeroRated.amount;
-    totalAmount += formData.sales.exempt.amount;
-    totalAmount += formData.sales.goodsImported.amount;
-    totalVat += formData.sales.goodsImported.vat;
-    totalAmount += formData.sales.adjustmentsImports.amount;
-    totalVat += formData.sales.adjustmentsImports.vat;
+    if (formData.sales?.standardRated) {
+      Object.values(formData.sales.standardRated).forEach((emirate: any) => {
+        totalAmount += Number(emirate.amount || 0);
+        totalVat += Number(emirate.vat || 0);
+      });
+    }
+    totalAmount += Number(formData.sales?.touristRefunds?.amount || 0);
+    totalVat += Number(formData.sales?.touristRefunds?.vat || 0);
+    totalAmount += Number(formData.sales?.reverseCharge?.amount || 0);
+    totalVat += Number(formData.sales?.reverseCharge?.vat || 0);
+    totalAmount += Number(formData.sales?.zeroRated?.amount || 0);
+    totalAmount += Number(formData.sales?.exempt?.amount || 0);
+    totalAmount += Number(formData.sales?.goodsImported?.amount || 0);
+    totalVat += Number(formData.sales?.goodsImported?.vat || 0);
+    totalAmount += Number(formData.sales?.adjustmentsImports?.amount || 0);
+    totalVat += Number(formData.sales?.adjustmentsImports?.vat || 0);
     return { totalAmount, totalVat };
   };
 
   const calculateExpensesTotals = () => {
-    const totalAmount = formData.expenses.standardRated.amount + formData.expenses.reverseCharge.amount;
-    const totalVat = formData.expenses.standardRated.vat + formData.expenses.reverseCharge.vat;
+    const totalAmount = Number(formData.expenses?.standardRated?.amount || 0) + Number(formData.expenses?.reverseCharge?.amount || 0);
+    const totalVat = Number(formData.expenses?.standardRated?.vat || 0) + Number(formData.expenses?.reverseCharge?.vat || 0);
     return { totalAmount, totalVat };
   };
 
