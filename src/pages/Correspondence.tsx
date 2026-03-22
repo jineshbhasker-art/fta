@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
-import { handleFirestoreError, OperationType } from '../utils/errorHandlers';
+import { dataService } from '../services/dataService';
 import { Correspondence } from '../types';
 import { 
   Mail, 
@@ -25,11 +23,10 @@ const CorrespondencePage: React.FC = () => {
     const fetchMessages = async () => {
       if (!user) return;
       try {
-        const q = query(collection(db, 'correspondence'), where('userId', '==', user.uid));
-        const snap = await getDocs(q);
-        setMessages(snap.docs.map(d => ({ id: d.id, ...d.data() } as Correspondence)));
+        const data = await dataService.getCorrespondence();
+        setMessages(data);
       } catch (err) {
-        handleFirestoreError(err, OperationType.LIST, 'correspondence');
+        console.error('Error fetching correspondence:', err);
       } finally {
         setLoading(false);
       }

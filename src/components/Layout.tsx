@@ -1,7 +1,6 @@
 import React from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
-import GeminiAssistant from './GeminiAssistant';
 import { Monitor, MessageSquare, Phone } from 'lucide-react';
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -25,8 +24,6 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               <Phone size={16} />
             </button>
           </div>
-
-          <GeminiAssistant />
         </main>
         <footer className="bg-[#F2F2F2] border-t border-gray-200">
           <div className="max-w-7xl mx-auto px-6 py-12 grid grid-cols-1 md:grid-cols-4 gap-12">

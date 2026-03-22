@@ -1,10 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, query, where, getDocs, addDoc, Timestamp, deleteDoc, doc } from 'firebase/firestore';
-import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
-import { handleFirestoreError, OperationType } from '../utils/errorHandlers';
 import { VATReturn } from '../types';
+import { dataService } from '../services/dataService';
 import { 
   ChevronRight, 
   Plus, 
@@ -43,36 +41,16 @@ const VATServices: React.FC = () => {
     'VAT 201 - Submitted VAT Returns'
   ];
 
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
+
   const fetchReturns = async () => {
     if (!user) return;
     try {
-      const q = query(collection(db, 'vat_returns'), where('userId', '==', user.uid));
-      const querySnapshot = await getDocs(q);
-      const fetchedReturns = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as VATReturn));
-
-      // Auto-seed 2026-Q2 if not exists
-      const hasQ2 = fetchedReturns.some(r => r.period === '2026-Q2');
-      if (!hasQ2) {
-          const newReturn = {
-            userId: user.uid,
-            period: '2026-Q2',
-            status: 'Draft' as const,
-            totalSales: 750000,
-            totalVAT: 37500,
-            netVAT: 37500,
-            dueDate: '2026-07-28',
-            createdAt: Timestamp.now()
-          };
-          const docRef = await addDoc(collection(db, 'vat_returns'), newReturn);
-          setReturns([{ id: docRef.id, ...newReturn }, ...fetchedReturns]);
-      } else {
-        setReturns(fetchedReturns);
-      }
+      const data = await dataService.getVATReturns();
+      setReturns(data as any);
     } catch (err) {
-      handleFirestoreError(err, OperationType.LIST, 'vat_returns');
+      console.error('Error fetching returns:', err);
     } finally {
       setLoading(false);
     }
@@ -82,13 +60,20 @@ const VATServices: React.FC = () => {
     fetchReturns();
   }, [user]);
 
+  const filteredReturns = returns.filter(ret => {
+    const matchesSearch = ret.period.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                         ret.id.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'All' || ret.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
   const handleDelete = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this return?')) return;
     try {
-      await deleteDoc(doc(db, 'vat_returns', id));
+      await dataService.deleteVATReturn(id);
       setReturns(prev => prev.filter(r => r.id !== id));
     } catch (err) {
-      handleFirestoreError(err, OperationType.DELETE, `vat_returns/${id}`);
+      console.error('Error deleting return:', err);
     }
   };
 
@@ -98,7 +83,7 @@ const VATServices: React.FC = () => {
     <div className="flex flex-col h-full bg-[#F8F9FA]">
       {/* Breadcrumbs */}
       <div className="px-6 py-3 flex items-center gap-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
-        <span>Home</span>
+        <span className="cursor-pointer hover:text-[#B8860B]" onClick={() => navigate('/')}>Home</span>
         <ChevronRight size={10} />
         <span className="text-[#B8860B]">VAT Services</span>
       </div>
@@ -151,13 +136,24 @@ const VATServices: React.FC = () => {
                 <input 
                   type="text" 
                   placeholder="Search returns..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-9 pr-4 py-1.5 bg-white border border-gray-200 rounded text-[11px] outline-none focus:border-[#B8860B] w-64"
                 />
               </div>
-              <button className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 rounded text-[11px] font-bold text-gray-600 hover:bg-gray-50">
-                <Filter size={14} />
-                Filter
-              </button>
+              <div className="relative">
+                <select 
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="pl-3 pr-8 py-1.5 bg-white border border-gray-200 rounded text-[11px] font-bold text-gray-600 outline-none appearance-none cursor-pointer"
+                >
+                  <option value="All">All Statuses</option>
+                  <option value="Filed">Filed</option>
+                  <option value="Draft">Draft</option>
+                  <option value="Submitted">Submitted</option>
+                </select>
+                <Filter className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={12} />
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <button className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 rounded text-[11px] font-bold text-gray-600 hover:bg-gray-50">
@@ -188,12 +184,12 @@ const VATServices: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {returns.map((ret) => (
+                {filteredReturns.map((ret) => (
                   <tr key={ret.id} className="hover:bg-gray-50 transition-colors">
                     <td className="py-4 px-4">
                       <div className="flex items-center gap-3">
                         <div className={`w-8 h-8 rounded flex items-center justify-center ${
-                          ret.status === 'Filed' ? 'bg-green-50 text-green-600' : 'bg-orange-50 text-orange-600'
+                          ret.status === 'Filed' || ret.status === 'Submitted' ? 'bg-green-50 text-green-600' : 'bg-orange-50 text-orange-600'
                         }`}>
                           <FileText size={16} />
                         </div>
@@ -205,11 +201,11 @@ const VATServices: React.FC = () => {
                     </td>
                     <td className="py-4 px-4">
                       <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase flex items-center gap-1 w-fit ${
-                        ret.status === 'Filed' 
+                        ret.status === 'Filed' || ret.status === 'Submitted'
                           ? 'bg-green-100 text-green-700' 
                           : 'bg-orange-100 text-orange-700'
                       }`}>
-                        {ret.status === 'Filed' ? <CheckCircle2 size={10} /> : <Clock size={10} />}
+                        {ret.status === 'Filed' || ret.status === 'Submitted' ? <CheckCircle2 size={10} /> : <Clock size={10} />}
                         {ret.status}
                       </span>
                     </td>
@@ -224,12 +220,17 @@ const VATServices: React.FC = () => {
                     </td>
                     <td className="py-4 px-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <button className="p-1.5 text-gray-400 hover:text-[#B8860B] transition-colors">
-                          <RotateCcw size={14} />
+                        <button 
+                          onClick={() => navigate(`/vat/${ret.id}`)}
+                          className="p-1.5 text-gray-400 hover:text-[#B8860B] transition-colors"
+                          title="View Details"
+                        >
+                          <ChevronRight size={14} />
                         </button>
                         <button 
                           onClick={() => handleDelete(ret.id)}
                           className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"
+                          title="Delete"
                         >
                           <Trash2 size={14} />
                         </button>
@@ -244,13 +245,16 @@ const VATServices: React.FC = () => {
             </table>
           </div>
           
-          {returns.length === 0 && (
+          {filteredReturns.length === 0 && (
             <div className="py-20 text-center">
               <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
                 <FileText size={32} className="text-gray-300" />
               </div>
               <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">No VAT Returns Found</p>
-              <button className="mt-4 text-[10px] font-bold text-[#B8860B] hover:underline uppercase">
+              <button 
+                onClick={() => navigate('/vat/new')}
+                className="mt-4 text-[10px] font-bold text-[#B8860B] hover:underline uppercase"
+              >
                 Start your first filing
               </button>
             </div>

@@ -1,11 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
-import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
+import { dataService } from '../services/dataService';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { GoogleGenAI } from "@google/genai";
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -26,6 +24,7 @@ import {
 } from 'recharts';
 import { 
   ChevronRight, 
+  ChevronDown,
   TrendingUp, 
   TrendingDown, 
   DollarSign, 
@@ -33,72 +32,43 @@ import {
   Calendar,
   Filter,
   Download,
-  Clock,
-  Sparkles,
-  Loader2
+  Clock
 } from 'lucide-react';
 
 const VATReporting: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [filings, setFilings] = useState<any[]>([]);
+  const [filteredFilings, setFilteredFilings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [aiInsight, setAiInsight] = useState<string | null>(null);
-  const [aiLoading, setAiLoading] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string>('All');
 
   useEffect(() => {
-    if (!user) return;
-
-    const q = query(
-      collection(db, 'vat_returns'),
-      where('userId', '==', user.uid)
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setFilings(data);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
+    const fetchFilings = async () => {
+      if (!user) return;
+      try {
+        const data = await dataService.getVATReturns();
+        setFilings(data);
+        setFilteredFilings(data);
+      } catch (err) {
+        console.error('Error fetching filings:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchFilings();
   }, [user]);
 
-  const generateAiInsight = async () => {
-    if (filings.length === 0) return;
-    setAiLoading(true);
-    try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      const model = "gemini-3.1-flash-lite-preview";
-      
-      const dataSummary = filings.map(f => ({
-        period: f.period,
-        sales: f.totalSales,
-        vat: f.totalVAT,
-        netVat: f.netVAT,
-        status: f.status
-      }));
-
-      const response = await ai.models.generateContent({
-        model,
-        contents: `Analyze the following VAT filing data for a UAE business and provide 3 concise, actionable insights or observations. Focus on trends, compliance, or potential tax savings. Keep it professional and brief.
-        
-        Data: ${JSON.stringify(dataSummary)}`,
-      });
-
-      setAiInsight(response.text || "No insights available at this time.");
-    } catch (err) {
-      console.error("AI Insight Error:", err);
-      setAiInsight("Failed to generate AI insights. Please check your connection.");
-    } finally {
-      setAiLoading(false);
+  useEffect(() => {
+    if (statusFilter === 'All') {
+      setFilteredFilings(filings);
+    } else {
+      setFilteredFilings(filings.filter(f => f.status === statusFilter));
     }
-  };
+  }, [statusFilter, filings]);
 
   // Prepare data for charts
-  const barData = filings
+  const barData = filteredFilings
     .filter(f => f.status === 'Submitted' || f.status === 'Filed')
     .map(f => ({
       name: f.period,
@@ -106,16 +76,18 @@ const VATReporting: React.FC = () => {
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
 
-  const totalNetVat = filings.reduce((acc, curr) => acc + (curr.netVAT || 0), 0);
-  const submittedCount = filings.filter(f => f.status === 'Submitted').length;
-  const draftCount = filings.filter(f => f.status === 'Draft').length;
+  const totalNetVat = filteredFilings.reduce((acc, curr) => acc + (curr.netVAT || 0), 0);
+  const submittedCount = filteredFilings.filter(f => f.status === 'Submitted' || f.status === 'Filed').length;
+  const draftCount = filteredFilings.filter(f => f.status === 'Draft').length;
+  const overdueCount = filteredFilings.filter(f => f.status === 'Overdue').length;
 
   const pieData = [
     { name: 'Submitted', value: submittedCount },
     { name: 'Draft', value: draftCount },
-  ];
+    { name: 'Overdue', value: overdueCount },
+  ].filter(d => d.value > 0);
 
-  const COLORS = ['#B8860B', '#0A192F'];
+  const COLORS = ['#B8860B', '#0A192F', '#EF4444'];
 
   if (loading) return <div className="flex items-center justify-center h-screen">Loading Reports...</div>;
 
@@ -134,49 +106,25 @@ const VATReporting: React.FC = () => {
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-bold text-[#0A192F] uppercase">VAT Reporting & Analytics</h2>
           <div className="flex gap-2">
-            <button className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 rounded text-[10px] font-bold text-gray-600 hover:bg-gray-50">
-              <Filter size={14} />
-              Filter
-            </button>
+            <div className="relative">
+              <select 
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="pl-8 pr-8 py-1.5 bg-white border border-gray-200 rounded text-[10px] font-bold text-gray-600 outline-none appearance-none cursor-pointer hover:bg-gray-50"
+              >
+                <option value="All">All Statuses</option>
+                <option value="Submitted">Submitted / Filed</option>
+                <option value="Draft">Draft</option>
+                <option value="Overdue">Overdue</option>
+              </select>
+              <Filter size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+              <ChevronDown size={10} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            </div>
             <button className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 rounded text-[10px] font-bold text-gray-600 hover:bg-gray-50">
               <Download size={14} />
               Export PDF
             </button>
           </div>
-        </div>
-
-        {/* AI Insights Section */}
-        <div className="bg-gradient-to-br from-[#0A192F] to-[#152A4A] p-6 rounded-lg border border-white/10 shadow-lg text-white space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Sparkles className="text-[#B8860B]" size={20} />
-              <h3 className="text-sm font-bold uppercase tracking-wider">AI-Powered Tax Insights</h3>
-            </div>
-            <button 
-              onClick={generateAiInsight}
-              disabled={aiLoading}
-              className="px-4 py-1.5 bg-[#B8860B] hover:bg-[#9A6F09] text-white text-[10px] font-bold rounded uppercase tracking-widest transition-all disabled:opacity-50 flex items-center gap-2"
-            >
-              {aiLoading ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-              {aiInsight ? 'Refresh Insights' : 'Generate Insights'}
-            </button>
-          </div>
-          
-          {aiInsight ? (
-            <div className="bg-white/5 border border-white/10 rounded-lg p-4 text-[11px] leading-relaxed text-white/80 font-medium">
-              <div className="prose prose-invert max-w-none">
-                {aiInsight.split('\n').map((line, i) => (
-                  <p key={i} className="mb-2">{line}</p>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="text-center py-4">
-              <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">
-                Click the button above to analyze your VAT data with Gemini AI
-              </p>
-            </div>
-          )}
         </div>
 
         {/* Stats Grid */}
@@ -294,39 +242,48 @@ const VATReporting: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {filings.slice(0, 5).map((f) => (
-                  <tr key={f.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-bold text-gray-700">{f.period}</td>
-                    <td className="px-4 py-3">
-                      <span className={cn(
-                        "px-2 py-0.5 rounded-[4px] font-bold uppercase text-[8px]",
-                        f.status === 'Submitted' ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"
-                      )}>
-                        {f.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">{(f.totalSales || 0).toLocaleString()} AED</td>
-                    <td className="px-4 py-3 font-bold text-[#B8860B]">{(f.netVAT || 0).toLocaleString()} AED</td>
-                    <td className="px-4 py-3 text-gray-500">{f.filedAt ? new Date(f.filedAt).toLocaleDateString() : '-'}</td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button 
-                          onClick={() => navigate(`/vat/${f.id}`)}
-                          className="p-1.5 text-gray-400 hover:text-[#B8860B] transition-colors"
-                          title="View Details"
-                        >
-                          <FileText size={14} />
-                        </button>
-                        <button 
-                          className="p-1.5 text-gray-400 hover:text-[#B8860B] transition-colors"
-                          title="Download Return"
-                        >
-                          <Download size={14} />
-                        </button>
-                      </div>
+                {filteredFilings.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-8 text-center text-gray-400 font-bold uppercase tracking-widest">
+                      No filings found for the selected status
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  filteredFilings.map((f) => (
+                    <tr key={f.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 font-bold text-gray-700">{f.period}</td>
+                      <td className="px-4 py-3">
+                        <span className={cn(
+                          "px-2 py-0.5 rounded-[4px] font-bold uppercase text-[8px]",
+                          f.status === 'Submitted' || f.status === 'Filed' ? "bg-green-100 text-green-700" : 
+                          f.status === 'Overdue' ? "bg-red-100 text-red-700" : "bg-orange-100 text-orange-700"
+                        )}>
+                          {f.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">{(f.totalSales || 0).toLocaleString()} AED</td>
+                      <td className="px-4 py-3 font-bold text-[#B8860B]">{(f.netVAT || 0).toLocaleString()} AED</td>
+                      <td className="px-4 py-3 text-gray-500">{f.filedAt ? new Date(f.filedAt).toLocaleDateString() : '-'}</td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button 
+                            onClick={() => navigate(`/vat/${f.id}`)}
+                            className="p-1.5 text-gray-400 hover:text-[#B8860B] transition-colors"
+                            title="View Details"
+                          >
+                            <FileText size={14} />
+                          </button>
+                          <button 
+                            className="p-1.5 text-gray-400 hover:text-[#B8860B] transition-colors"
+                            title="Download Return"
+                          >
+                            <Download size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

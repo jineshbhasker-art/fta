@@ -1,23 +1,21 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { 
-  LayoutDashboard, 
   FileText, 
   Mail, 
   CreditCard, 
   User, 
   LogOut,
   ShieldCheck,
-  HelpCircle,
-  MessageSquare,
   Home,
   LayoutGrid,
   Briefcase,
   ChevronDown,
-  FileSearch
+  FileSearch,
+  Settings,
+  HelpCircle
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { auth } from '../firebase';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -26,7 +24,7 @@ function cn(...inputs: ClassValue[]) {
 }
 
 const Sidebar: React.FC = () => {
-  const { profile } = useAuth();
+  const { logout } = useAuth();
 
   const navItems = [
     { name: 'HOME', path: '/', icon: Home },
@@ -42,60 +40,54 @@ const Sidebar: React.FC = () => {
   ];
 
   return (
-    <aside className="w-64 bg-[#F2F2F2] border-r border-gray-200 flex flex-col shrink-0">
-      <nav className="flex-1 py-4 space-y-0.5 overflow-y-auto">
-        {/* Home Item */}
-        <NavLink
-          to="/"
-          className={({ isActive }) => cn(
-            "flex items-center gap-3 px-4 py-3 transition-colors text-[10px] font-bold uppercase tracking-wider",
-            isActive && !window.location.search.includes('entity=')
-              ? "bg-[#B8860B] text-white shadow-sm" 
-              : "text-gray-700 hover:bg-gray-200"
-          )}
-        >
-          <Home size={16} />
-          <span>HOME</span>
-        </NavLink>
-
-        {/* Active Entity Section */}
-        <div className="bg-[#B8860B] text-white px-4 py-3 flex items-center justify-between cursor-pointer">
-          <div className="flex flex-col">
-            <span className="text-[9px] font-bold opacity-80 uppercase">MOHAMMAD</span>
-            <span className="text-[10px] font-bold leading-tight">
-              SHAFIULALAM VEGETABLES AND FRUITS TRADING L.L.C
-            </span>
-          </div>
-          <ChevronDown size={14} />
+    <aside className="w-72 bg-brand-primary text-white flex flex-col shrink-0 shadow-2xl z-20 overflow-hidden">
+      {/* Brand Header */}
+      <div className="p-6 flex items-center gap-3 border-b border-white/10">
+        <div className="w-10 h-10 bg-brand-accent rounded-xl flex items-center justify-center font-bold text-xl text-white shadow-lg shadow-brand-accent/20">
+          E
         </div>
+        <div className="flex flex-col">
+          <span className="text-xs font-bold tracking-widest uppercase text-white/60">EmaraTax</span>
+          <span className="text-sm font-black tracking-tight">Authority Portal</span>
+        </div>
+      </div>
 
-        {/* Sub-nav items */}
-        {navItems.slice(1).map((item) => (
+      <nav className="flex-1 py-6 space-y-1 overflow-y-auto px-3 scrollbar-hide">
+        {navItems.map((item) => (
           <NavLink
             key={item.path}
             to={item.path}
             className={({ isActive }) => {
               const isVatActive = item.name === 'VAT' && window.location.pathname.startsWith('/vat');
               return cn(
-                "flex items-center gap-3 px-4 py-2.5 transition-colors text-[10px] font-bold uppercase tracking-wider",
+                "flex items-center gap-3 px-4 py-3.5 transition-all text-[11px] font-bold uppercase tracking-widest rounded-xl group",
                 (isActive || isVatActive)
-                  ? "bg-[#B8860B] text-white shadow-sm" 
-                  : "text-gray-700 hover:bg-gray-200"
+                  ? "bg-brand-accent text-white shadow-lg shadow-brand-accent/20" 
+                  : "text-white/60 hover:text-white hover:bg-white/5"
               );
             }}
           >
-            <item.icon size={14} />
+            <item.icon size={18} className="group-hover:scale-110 transition-transform" />
             <span>{item.name}</span>
           </NavLink>
         ))}
       </nav>
 
-      <div className="p-4 border-t border-gray-200">
+      {/* Bottom Actions */}
+      <div className="p-4 space-y-2 border-t border-white/10 bg-black/20">
+        <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/60 hover:text-white hover:bg-white/5 transition-all text-[11px] font-bold uppercase tracking-widest">
+          <Settings size={18} />
+          <span>Settings</span>
+        </button>
+        <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/60 hover:text-white hover:bg-white/5 transition-all text-[11px] font-bold uppercase tracking-widest">
+          <HelpCircle size={18} />
+          <span>Support</span>
+        </button>
         <button 
-          onClick={() => auth.signOut()}
-          className="w-full flex items-center gap-3 px-3 py-2 rounded text-red-600 hover:bg-red-50 transition-colors text-[10px] font-bold uppercase"
+          onClick={() => logout()}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all text-[11px] font-bold uppercase tracking-widest mt-2"
         >
-          <LogOut size={16} />
+          <LogOut size={18} />
           <span>Logout</span>
         </button>
       </div>

@@ -1,7 +1,8 @@
 export type UserRole = 'corporate' | 'person' | 'agent' | 'admin';
 
 export interface UserProfile {
-  uid: string;
+  id: string;
+  username: string;
   email: string;
   displayName?: string;
   role: UserRole;
@@ -23,11 +24,12 @@ export interface VATReturn {
   userId: string;
   period: string;
   dueDate: string;
-  status: 'Filed' | 'Draft' | 'Overdue';
+  status: 'Filed' | 'Draft' | 'Overdue' | 'Submitted';
   totalSales: number;
   totalVAT: number;
   netVAT: number;
   filedAt?: string;
+  formData?: any;
 }
 
 export interface CorporateTaxReturn {
@@ -36,9 +38,10 @@ export interface CorporateTaxReturn {
   accountingPeriod: string;
   taxableIncome: number;
   taxAmount: number;
-  status: 'Filed' | 'Draft' | 'Overdue';
+  status: 'Filed' | 'Draft' | 'Overdue' | 'Submitted';
   filedAt?: string;
   dueDate: string;
+  formData?: any;
 }
 
 export interface Correspondence {

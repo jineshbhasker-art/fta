@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
+import { dataService } from '../services/dataService';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -31,30 +30,14 @@ const VATReturnDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [returnDetails, setReturnDetails] = useState<any>(null);
 
-  // Screenshot data mapping
-  const screenshotData: Record<string, any> = {
-    'sc1': { vatRef: '230010165962', netVAT: 25979.01, period: '01/12/2025 - 28/02/2026', status: 'Submitted', totalSales: 519580.20, totalExpenses: 0 },
-    'sc2': { vatRef: '230009650203', netVAT: 22298.81, period: '01/09/2025 - 30/11/2025', status: 'Submitted', totalSales: 445976.20, totalExpenses: 0 },
-    'sc3': { vatRef: '230009007872', netVAT: 6162.28, period: '01/06/2025 - 31/08/2025', status: 'Submitted', totalSales: 123245.60, totalExpenses: 0 },
-    'sc4': { vatRef: '230008349468', netVAT: 6646.98, period: '01/03/2025 - 31/05/2025', status: 'Submitted', totalSales: 132939.60, totalExpenses: 0 },
-    'sc5': { vatRef: '230007923042', netVAT: 24989.01, period: '01/12/2024 - 28/02/2025', status: 'Submitted', totalSales: 499780.20, totalExpenses: 0 },
-  };
-
   useEffect(() => {
     const fetchData = async () => {
       if (!id) return;
       
-      if (screenshotData[id]) {
-        setReturnDetails(screenshotData[id]);
-        setLoading(false);
-        return;
-      }
-
       try {
-        const docRef = doc(db, 'vat_returns', id);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          setReturnDetails(docSnap.data());
+        const data = await dataService.getVATReturn(id);
+        if (data) {
+          setReturnDetails(data);
         }
       } catch (error) {
         console.error("Error fetching VAT return:", error);
@@ -192,6 +175,40 @@ const VATReturnDetail: React.FC = () => {
                       { label: 'Supplies subject to the reverse charge provisions', amount: 0, vat: 0 },
                       { label: 'Zero rated supplies', amount: 0, vat: 0 },
                       { label: 'Exempt supplies', amount: 0, vat: 0 }
+                    ].map((item) => (
+                      <tr key={item.label} className="hover:bg-gray-50/50">
+                        <td className="py-3 font-medium text-gray-700">{item.label}</td>
+                        <td className="py-3 text-right text-gray-600">{(item.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                        <td className="py-3 text-right font-bold text-[#0A192F]">{(item.vat || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                        <td className="py-3 text-right text-gray-400">0.00</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {activeTab === 'Expenses' && (
+              <div className="space-y-6">
+                <div className="bg-blue-50 p-3 rounded border border-blue-100 flex gap-3 text-blue-800 text-[11px]">
+                  <Info size={16} className="shrink-0" />
+                  <p>Details of all expenses and inputs incurred during this tax period on which you are claiming VAT recovery.</p>
+                </div>
+                
+                <table className="w-full text-[11px]">
+                  <thead>
+                    <tr className="text-left font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100">
+                      <th className="pb-3">Description</th>
+                      <th className="pb-3 text-right">Amount (AED)</th>
+                      <th className="pb-3 text-right">Recoverable VAT (AED)</th>
+                      <th className="pb-3 text-right">Adjustment (AED)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {[
+                      { label: 'Standard rated expenses', amount: returnDetails.totalExpenses || 0, vat: returnDetails.totalVAT || 0 },
+                      { label: 'Supplies subject to the reverse charge provisions', amount: 0, vat: 0 },
+                      { label: 'Other expenses', amount: 0, vat: 0 }
                     ].map((item) => (
                       <tr key={item.label} className="hover:bg-gray-50/50">
                         <td className="py-3 font-medium text-gray-700">{item.label}</td>

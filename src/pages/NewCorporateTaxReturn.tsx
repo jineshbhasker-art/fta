@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, addDoc, Timestamp } from 'firebase/firestore';
-import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
-import { handleFirestoreError, OperationType } from '../utils/errorHandlers';
+import { dataService } from '../services/dataService';
 import { ChevronRight, Save, Send, AlertCircle } from 'lucide-react';
 
 const NewCorporateTaxReturn: React.FC = () => {
@@ -19,7 +17,7 @@ const NewCorporateTaxReturn: React.FC = () => {
     dueDate: ''
   });
 
-  const handleSubmit = async (e: React.FormEvent, status: 'Draft' | 'Filed') => {
+  const handleSubmit = async (e: React.FormEvent, status: 'Draft' | 'Submitted') => {
     e.preventDefault();
     if (!user) return;
 
@@ -28,21 +26,21 @@ const NewCorporateTaxReturn: React.FC = () => {
 
     try {
       const ctReturn = {
-        userId: user.uid,
-        accountingPeriod: formData.accountingPeriod,
-        taxableIncome: parseFloat(formData.taxableIncome) || 0,
-        taxAmount: parseFloat(formData.taxAmount) || 0,
+        period: formData.accountingPeriod,
+        netTax: parseFloat(formData.taxAmount) || 0,
         status,
         dueDate: formData.dueDate,
-        filedAt: status === 'Filed' ? new Date().toISOString() : null,
-        createdAt: Timestamp.now()
+        formData: {
+          taxableIncome: parseFloat(formData.taxableIncome) || 0,
+          taxAmount: parseFloat(formData.taxAmount) || 0
+        }
       };
 
-      await addDoc(collection(db, 'corporate_tax_returns'), ctReturn);
+      await dataService.saveCorporateTaxReturn(ctReturn);
       navigate('/corporate-tax');
-    } catch (err) {
-      handleFirestoreError(err, OperationType.CREATE, 'corporate_tax_returns');
-      setError('Failed to save Corporate Tax return. Please check your inputs.');
+    } catch (err: any) {
+      console.error('Error saving CT return:', err);
+      setError(err.message || 'Failed to save Corporate Tax return. Please check your inputs.');
     } finally {
       setLoading(false);
     }
@@ -143,7 +141,7 @@ const NewCorporateTaxReturn: React.FC = () => {
             <button
               type="submit"
               disabled={loading}
-              onClick={(e) => handleSubmit(e, 'Filed')}
+              onClick={(e) => handleSubmit(e, 'Submitted')}
               className="flex items-center gap-2 px-8 py-2 bg-[#B8860B] text-white rounded-lg text-sm font-bold hover:bg-[#9A6F09] transition-all uppercase tracking-wider disabled:opacity-50"
             >
               <Send size={18} />

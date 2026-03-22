@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 
 const TaxablePerson: React.FC = () => {
-  const { profile } = useAuth();
+  const { user } = useAuth();
 
   const sections = [
     { title: 'Entity Details', icon: Building2 },
@@ -41,10 +41,10 @@ const TaxablePerson: React.FC = () => {
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
             <div className="p-8 bg-[#0A192F] text-white flex items-center gap-6">
               <div className="w-20 h-20 bg-[#B8860B] rounded-2xl flex items-center justify-center text-3xl font-bold">
-                {profile?.displayName?.charAt(0).toUpperCase()}
+                {user?.displayName?.charAt(0).toUpperCase()}
               </div>
               <div>
-                <h2 className="text-2xl font-bold">{profile?.displayName || 'Entity Name'}</h2>
+                <h2 className="text-2xl font-bold">{user?.displayName || 'Entity Name'}</h2>
                 <p className="text-gray-400">TRN: 100234567890003</p>
                 <div className="flex gap-4 mt-4">
                   <span className="px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-xs font-bold uppercase tracking-wider">Active</span>
@@ -65,7 +65,7 @@ const TaxablePerson: React.FC = () => {
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Trade Name (English)</label>
-                  <p className="text-gray-900 font-bold">{profile?.displayName || 'Entity Name'}</p>
+                  <p className="text-gray-900 font-bold">{user?.displayName || 'Entity Name'}</p>
                 </div>
               </div>
               <div className="space-y-6">
@@ -75,7 +75,7 @@ const TaxablePerson: React.FC = () => {
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Primary Email</label>
-                  <p className="text-gray-900 font-bold">{profile?.email}</p>
+                  <p className="text-gray-900 font-bold">{user?.email}</p>
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Primary Phone</label>
@@ -121,7 +121,7 @@ const TaxablePerson: React.FC = () => {
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">Email Address</p>
-                  <p className="text-sm font-bold text-gray-900">{profile?.email}</p>
+                  <p className="text-sm font-bold text-gray-900">{user?.email}</p>
                 </div>
               </div>
               <div className="flex items-center gap-4">

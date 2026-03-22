@@ -1,18 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  collection, 
-  query, 
-  where, 
-  getDocs, 
-  deleteDoc, 
-  doc,
-  onSnapshot
-} from 'firebase/firestore';
-import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
-import { handleFirestoreError, OperationType } from '../utils/errorHandlers';
+import { dataService } from '../services/dataService';
 import { 
   ChevronRight, 
   Search, 
@@ -43,140 +33,59 @@ const MyFilings: React.FC = () => {
   const [filings, setFilings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showConfirmDelete, setShowConfirmDelete] = useState<string | null>(null);
-  const [deletedIds, setDeletedIds] = useState<string[]>(() => {
-    const saved = localStorage.getItem('deleted_filings');
-    return saved ? JSON.parse(saved) : [];
-  });
 
-  useEffect(() => {
-    localStorage.setItem('deleted_filings', JSON.stringify(deletedIds));
-  }, [deletedIds]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
 
-  useEffect(() => {
+  const fetchFilings = async () => {
     if (!user) return;
+    setLoading(true);
+    try {
+      const data = await dataService.getVATReturns();
+      const dbFilings = data.map((item: any) => ({
+        ...item,
+        type: 'VAT Return',
+        vatRef: item.vatRef || '230010165962',
+        periodFrom: item.periodFrom || '01/12/2025',
+        periodTo: item.periodTo || '28/02/2026',
+        dueDate: item.dueDate || '30/03/2026',
+        taxYearEnd: item.taxYearEnd || '28/02/2026',
+        submittedDate: item.filedAt ? new Date(item.filedAt).toLocaleDateString('en-GB') : '-',
+        netVatPosition: item.netVAT?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00',
+        exemptionStatus: '-',
+        status: item.status
+      }));
 
-    const q = query(
-      collection(db, 'vat_returns'),
-      where('userId', '==', user.uid)
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const dbFilings = snapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          type: 'VAT Return',
-          vatRef: data.vatRef || '230010165962',
-          periodFrom: data.periodFrom || '01/12/2025',
-          periodTo: data.periodTo || '28/02/2026',
-          dueDate: data.dueDate || '30/03/2026',
-          taxYearEnd: data.taxYearEnd || '28/02/2026',
-          submittedDate: data.filedAt ? new Date(data.filedAt).toLocaleDateString('en-GB') : '-',
-          netVatPosition: data.netVAT?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00',
-          exemptionStatus: '-',
-          status: data.status || 'Draft'
-        };
-      });
-
-      // Screenshot data
-      const screenshotData = [
-        {
-          id: 'sc1',
-          type: 'VAT Return',
-          vatRef: '230010165962',
-          periodFrom: '01/12/2025',
-          periodTo: '28/02/2026',
-          dueDate: '30/03/2026',
-          taxYearEnd: '28/02/2026',
-          submittedDate: '-',
-          netVatPosition: '25,979.01',
-          exemptionStatus: '-',
-          status: 'Draft'
-        },
-        {
-          id: 'sc2',
-          type: 'VAT Return',
-          vatRef: '230009650203',
-          periodFrom: '01/09/2025',
-          periodTo: '30/11/2025',
-          dueDate: '29/12/2025',
-          taxYearEnd: '28/02/2026',
-          submittedDate: '25/12/2025',
-          netVatPosition: '22,298.81',
-          exemptionStatus: '-',
-          status: 'Submitted'
-        },
-        {
-          id: 'sc3',
-          type: 'VAT Return',
-          vatRef: '230009007872',
-          periodFrom: '01/06/2025',
-          periodTo: '31/08/2025',
-          dueDate: '29/09/2025',
-          taxYearEnd: '28/02/2026',
-          submittedDate: '26/09/2025',
-          netVatPosition: '6,162.28',
-          exemptionStatus: '-',
-          status: 'Submitted'
-        },
-        {
-          id: 'sc4',
-          type: 'VAT Return',
-          vatRef: '230008349468',
-          periodFrom: '01/03/2025',
-          periodTo: '31/05/2025',
-          dueDate: '30/06/2025',
-          taxYearEnd: '28/02/2026',
-          submittedDate: '24/06/2025',
-          netVatPosition: '6,646.98',
-          exemptionStatus: '-',
-          status: 'Submitted'
-        },
-        {
-          id: 'sc5',
-          type: 'VAT Return',
-          vatRef: '230007923042',
-          periodFrom: '01/12/2024',
-          periodTo: '28/02/2025',
-          dueDate: '28/03/2025',
-          taxYearEnd: '28/02/2025',
-          submittedDate: '25/03/2025',
-          netVatPosition: '24,989.01',
-          exemptionStatus: '-',
-          status: 'Submitted'
-        }
-      ];
-
-      // Merge: if database is empty, show screenshot data. 
-      // If database has items, show them first, then screenshot data (excluding duplicates by vatRef)
-      const merged = [...dbFilings];
-      screenshotData.forEach(sc => {
-        if (!merged.find(m => m.vatRef === sc.vatRef) && !deletedIds.includes(sc.id)) {
-          merged.push(sc);
-        }
-      });
-
-      setFilings(merged.filter(f => !deletedIds.includes(f.id)));
+      setFilings(dbFilings);
+    } catch (err) {
+      console.error('Error fetching filings:', err);
+      showToast('Failed to fetch filings', 'error');
+    } finally {
       setLoading(false);
-    }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'vat_returns');
-    });
+    }
+  };
 
-    return () => unsubscribe();
+  useEffect(() => {
+    fetchFilings();
   }, [user]);
+
+  const filteredFilings = filings.filter(filing => {
+    const matchesSearch = filing.period.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                         filing.vatRef.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'All' || filing.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
   const handleDelete = async (id: string) => {
     try {
-      if (!id.startsWith('sc')) {
-        await deleteDoc(doc(db, 'vat_returns', id));
-      }
-      setDeletedIds(prev => [...prev, id]);
+      await dataService.deleteVATReturn(id);
       setShowConfirmDelete(null);
       setShowActionMenu(null);
       showToast('VAT return deleted successfully', 'success');
+      fetchFilings();
     } catch (err) {
-      handleFirestoreError(err, OperationType.DELETE, `vat_returns/${id}`);
+      console.error('Error deleting return:', err);
+      showToast('Failed to delete return', 'error');
     }
   };
 
@@ -186,7 +95,7 @@ const MyFilings: React.FC = () => {
       <div className="px-6 py-2 flex items-center gap-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider bg-white border-b border-gray-100">
         <span className="cursor-pointer hover:text-[#B8860B]" onClick={() => navigate('/')}>Home</span>
         <ChevronRight size={10} />
-        <span className="cursor-pointer hover:text-[#B8860B]" onClick={() => navigate('/')}>MOHAMMAD SHAFIULALAM VEGETABLES AND FRUITS TRADING L.L.C</span>
+        <span className="cursor-pointer hover:text-[#B8860B]" onClick={() => navigate('/')}>Entity Overview</span>
         <ChevronRight size={10} />
         <span className="cursor-pointer hover:text-[#B8860B]" onClick={() => navigate('/vat')}>VAT</span>
         <ChevronRight size={10} />
@@ -235,8 +144,15 @@ const MyFilings: React.FC = () => {
                         <ChevronDown size={10} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                       </div>
                       <div className="relative">
-                        <select className="pl-3 pr-8 py-1 bg-white border border-gray-200 rounded text-[10px] font-bold text-gray-700 outline-none appearance-none cursor-pointer">
-                          <option>Status</option>
+                        <select 
+                          value={statusFilter}
+                          onChange={(e) => setStatusFilter(e.target.value)}
+                          className="pl-3 pr-8 py-1 bg-white border border-gray-200 rounded text-[10px] font-bold text-gray-700 outline-none appearance-none cursor-pointer"
+                        >
+                          <option value="All">Status</option>
+                          <option value="Filed">Filed</option>
+                          <option value="Draft">Draft</option>
+                          <option value="Submitted">Submitted</option>
                         </select>
                         <ChevronDown size={10} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                       </div>
@@ -244,7 +160,13 @@ const MyFilings: React.FC = () => {
                   </div>
                   <div className="relative">
                     <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <input type="text" placeholder="Search" className="pl-8 pr-4 py-1 bg-white border border-gray-200 rounded text-[10px] outline-none" />
+                    <input 
+                      type="text" 
+                      placeholder="Search" 
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-8 pr-4 py-1 bg-white border border-gray-200 rounded text-[10px] outline-none" 
+                    />
                   </div>
                 </div>
 
@@ -260,7 +182,7 @@ const MyFilings: React.FC = () => {
                         <th className="px-4 py-3 font-bold text-gray-600 uppercase">Tax Year End</th>
                         <th className="px-4 py-3 font-bold text-gray-600 uppercase">Submitted Date</th>
                         <th className="px-4 py-3 font-bold text-gray-600 uppercase">Net VAT Position</th>
-                        <th className="px-4 py-3 font-bold text-gray-600 uppercase">Exemption / UP Status failed</th>
+                        <th className="px-4 py-3 font-bold text-gray-600 uppercase">Exemption / UP Status</th>
                         <th className="px-4 py-3 font-bold text-gray-600 uppercase">Status</th>
                         <th className="px-4 py-3 font-bold text-gray-600 uppercase text-center">Action</th>
                       </tr>
@@ -270,11 +192,11 @@ const MyFilings: React.FC = () => {
                         <tr>
                           <td colSpan={11} className="py-8 text-center text-gray-400 font-bold uppercase">Loading...</td>
                         </tr>
-                      ) : filings.length === 0 ? (
+                      ) : filteredFilings.length === 0 ? (
                         <tr>
                           <td colSpan={11} className="py-8 text-center text-gray-400 font-bold uppercase">No data</td>
                         </tr>
-                      ) : filings.map((row) => {
+                      ) : filteredFilings.map((row) => {
                         // Determine if due date is in the future for color coding
                         const isFuture = row.status === 'Draft'; // Simple heuristic based on screenshot
                         

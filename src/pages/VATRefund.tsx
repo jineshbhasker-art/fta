@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { dataService } from '../services/dataService';
 import { 
   ChevronRight, 
   Plus, 
@@ -14,24 +16,25 @@ import {
 
 const VATRefund: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('Refund Requests');
+  const [refunds, setRefunds] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const refunds = [
-    {
-      id: 'REF-2026-001',
-      period: '2025-Q4',
-      amount: 12500,
-      status: 'Approved',
-      date: '2026-02-15',
-    },
-    {
-      id: 'REF-2026-002',
-      period: '2026-Q1',
-      amount: 8400,
-      status: 'Pending',
-      date: '2026-03-10',
-    }
-  ];
+  useEffect(() => {
+    const fetchRefunds = async () => {
+      if (!user) return;
+      try {
+        const data = await dataService.getVATRefunds();
+        setRefunds(data);
+      } catch (err) {
+        console.error('Error fetching refunds:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchRefunds();
+  }, [user]);
 
   return (
     <div className="flex flex-col h-full bg-[#F8F9FA]">
@@ -106,27 +109,33 @@ const VATRefund: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {refunds.map((ref) => (
-                  <tr key={ref.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="py-4 px-4 text-[11px] font-bold text-gray-900">{ref.id}</td>
-                    <td className="py-4 px-4 text-[11px] text-gray-600">{ref.period}</td>
-                    <td className="py-4 px-4 text-[11px] font-bold text-gray-900">{(ref.amount || 0).toLocaleString()}</td>
-                    <td className="py-4 px-4">
-                      <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase flex items-center gap-1 w-fit ${
-                        ref.status === 'Approved' 
-                          ? 'bg-green-100 text-green-700' 
-                          : 'bg-orange-100 text-orange-700'
-                      }`}>
-                        {ref.status === 'Approved' ? <CheckCircle2 size={10} /> : <Clock size={10} />}
-                        {ref.status}
-                      </span>
-                    </td>
-                    <td className="py-4 px-4 text-[11px] text-gray-600">{ref.date}</td>
-                    <td className="py-4 px-4 text-right">
-                      <button className="text-[10px] font-bold text-[#B8860B] hover:underline uppercase">View Details</button>
-                    </td>
-                  </tr>
-                ))}
+                {loading ? (
+                  <tr><td colSpan={6} className="py-8 text-center text-gray-400 font-bold uppercase">Loading...</td></tr>
+                ) : refunds.length === 0 ? (
+                  <tr><td colSpan={6} className="py-8 text-center text-gray-400 font-bold uppercase">No requests found</td></tr>
+                ) : (
+                  refunds.map((ref) => (
+                    <tr key={ref.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="py-4 px-4 text-[11px] font-bold text-gray-900">{ref.id}</td>
+                      <td className="py-4 px-4 text-[11px] text-gray-600">{ref.period}</td>
+                      <td className="py-4 px-4 text-[11px] font-bold text-gray-900">{(ref.amount || 0).toLocaleString()}</td>
+                      <td className="py-4 px-4">
+                        <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase flex items-center gap-1 w-fit ${
+                          ref.status === 'Approved' 
+                            ? 'bg-green-100 text-green-700' 
+                            : 'bg-orange-100 text-orange-700'
+                        }`}>
+                          {ref.status === 'Approved' ? <CheckCircle2 size={10} /> : <Clock size={10} />}
+                          {ref.status}
+                        </span>
+                      </td>
+                      <td className="py-4 px-4 text-[11px] text-gray-600">{ref.date}</td>
+                      <td className="py-4 px-4 text-right">
+                        <button className="text-[10px] font-bold text-[#B8860B] hover:underline uppercase">View Details</button>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

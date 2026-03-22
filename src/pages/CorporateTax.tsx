@@ -1,10 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
-import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
-import { handleFirestoreError, OperationType } from '../utils/errorHandlers';
+import { dataService } from '../services/dataService';
 import { CorporateTaxReturn } from '../types';
 import { 
   Briefcase, 
@@ -18,54 +16,65 @@ import {
   AlertCircle,
   Trash2
 } from 'lucide-react';
-import { deleteDoc, doc } from 'firebase/firestore';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
 
 const CorporateTax: React.FC = () => {
   const { user } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
   const [recentReturns, setRecentReturns] = useState<CorporateTaxReturn[]>([]);
+  const [registrations, setRegistrations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showConfirmDelete, setShowConfirmDelete] = useState<string | null>(null);
 
-  const filings = [
-    { period: '2024', status: 'Active', trn: '200987654321001', dueDate: '2025-09-30' }
-  ];
-
-  const fetchCTReturns = async () => {
+  const fetchCTData = async () => {
     if (!user) return;
+    setLoading(true);
     try {
-      const q = query(
-        collection(db, 'corporate_tax_returns'),
-        where('userId', '==', user.uid),
-        orderBy('createdAt', 'desc'),
-        limit(5)
-      );
-      const querySnapshot = await getDocs(q);
-      const fetchedReturns = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as CorporateTaxReturn));
-      setRecentReturns(fetchedReturns);
+      const [returns, regs] = await Promise.all([
+        dataService.getCorporateTaxReturns(),
+        dataService.getRegistrations()
+      ]);
+
+      setRecentReturns(returns.map((r: any) => ({
+        id: r.id,
+        userId: r.userId,
+        accountingPeriod: r.period,
+        taxableIncome: r.formData?.taxableIncome || 0,
+        taxAmount: r.netTax,
+        status: r.status,
+        dueDate: r.dueDate,
+        filedAt: r.status === 'Submitted' ? r.createdAt : null,
+        createdAt: r.createdAt
+      } as CorporateTaxReturn)));
+
+      setRegistrations(regs.filter((r: any) => r.taxType === 'Corporate Tax'));
     } catch (err) {
-      handleFirestoreError(err, OperationType.LIST, 'corporate_tax_returns');
+      console.error('Error fetching CT data:', err);
+      showToast('Failed to fetch corporate tax data', 'error');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchCTReturns();
+    fetchCTData();
   }, [user]);
 
   const handleDelete = async (id: string) => {
     try {
-      await deleteDoc(doc(db, 'corporate_tax_returns', id));
+      await dataService.deleteCorporateTaxReturn(id);
       setShowConfirmDelete(null);
       showToast('Corporate tax return deleted successfully', 'success');
-      fetchCTReturns();
+      fetchCTData();
     } catch (err) {
-      handleFirestoreError(err, OperationType.DELETE, `corporate_tax_returns/${id}`);
+      console.error('Error deleting CT return:', err);
+      showToast('Failed to delete corporate tax return', 'error');
     }
   };
 
@@ -128,23 +137,32 @@ const CorporateTax: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {filings.map((f) => (
-                <tr key={f.period} className="group">
-                  <td className="py-4 font-bold text-gray-900">{f.period}</td>
-                  <td className="py-4 text-sm text-gray-600 font-mono">{f.trn}</td>
-                  <td className="py-4">
-                    <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-[10px] font-bold uppercase">
-                      {f.status}
-                    </span>
-                  </td>
-                  <td className="py-4 text-sm text-gray-500">{f.dueDate}</td>
-                  <td className="py-4 text-right">
-                    <button className="p-2 text-gray-400 hover:text-[#B8860B] transition-colors">
-                      <ArrowUpRight size={18} />
-                    </button>
-                  </td>
+              {registrations.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="py-8 text-center text-gray-400 text-sm">No active registrations found.</td>
                 </tr>
-              ))}
+              ) : (
+                registrations.map((reg) => (
+                  <tr key={reg.id} className="group">
+                    <td className="py-4 font-bold text-gray-900">2024</td>
+                    <td className="py-4 text-sm text-gray-600 font-mono">{reg.trn}</td>
+                    <td className="py-4">
+                      <span className={cn(
+                        "px-2 py-1 rounded-full text-[10px] font-bold uppercase",
+                        reg.status === 'Active' ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
+                      )}>
+                        {reg.status}
+                      </span>
+                    </td>
+                    <td className="py-4 text-sm text-gray-500">2025-09-30</td>
+                    <td className="py-4 text-right">
+                      <button className="p-2 text-gray-400 hover:text-[#B8860B] transition-colors">
+                        <ArrowUpRight size={18} />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -183,10 +201,10 @@ const CorporateTax: React.FC = () => {
                     </td>
                     <td className="py-4">
                       <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase flex items-center gap-1 w-fit ${
-                        ret.status === 'Filed' ? 'bg-green-100 text-green-700' : 
+                        ret.status === 'Submitted' || ret.status === 'Filed' ? 'bg-green-100 text-green-700' : 
                         ret.status === 'Draft' ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'
                       }`}>
-                        {ret.status === 'Filed' ? <CheckCircle2 size={10} /> : 
+                        {ret.status === 'Submitted' || ret.status === 'Filed' ? <CheckCircle2 size={10} /> : 
                          ret.status === 'Draft' ? <Clock size={10} /> : <AlertCircle size={10} />}
                         {ret.status}
                       </span>

@@ -9,13 +9,13 @@ interface RoleGuardProps {
 }
 
 const RoleGuard: React.FC<RoleGuardProps> = ({ children, allowedRoles }) => {
-  const { profile, loading } = useAuth();
+  const { user, loading } = useAuth();
 
   if (loading) {
     return <div className="flex items-center justify-center h-full">Verifying access...</div>;
   }
 
-  if (!profile || !allowedRoles.includes(profile.role)) {
+  if (!user || !allowedRoles.includes(user.role)) {
     return <Navigate to="/" replace />;
   }
 

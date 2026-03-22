@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 
 const Header: React.FC = () => {
-  const { profile } = useAuth();
+  const { user } = useAuth();
   const { showToast } = useToast();
 
   return (
@@ -20,7 +20,7 @@ const Header: React.FC = () => {
               <UserIcon size={12} />
             </div>
             <span className="text-[10px] font-bold truncate max-w-[150px]">
-              {profile?.email}
+              {user?.email}
             </span>
             <ChevronDown size={10} className="text-gray-400 group-hover:text-black" />
           </div>
